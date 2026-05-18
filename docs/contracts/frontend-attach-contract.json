@@ -1,0 +1,75 @@
+{
+  "contract_version": 1,
+  "runtime_root": "Foundation-Core",
+  "template_modes": ["foundation_attached", "standalone_template"],
+  "auth": {
+    "enabled": true,
+    "session_endpoint": "/api/auth/session",
+    "fallback_routes": ["/sign-in", "/sign-up"]
+  },
+  "content": {
+    "enabled": true,
+    "page_endpoint": "/api/content/pages/:slug",
+    "collections_endpoint": "/api/content/collections/:collection",
+    "site_config_endpoint": "/api/content/site-config",
+    "preview_endpoint": "/api/preview/enable",
+    "revalidation_endpoint": "/api/content/revalidate"
+  },
+  "forms": {
+    "enabled": true,
+    "submit_endpoint": "/api/forms/:formId/submit",
+    "anti_spam": ["rate-limit", "honeypot"]
+  },
+  "media": {
+    "enabled": true,
+    "upload_endpoint": "/api/media/upload",
+    "asset_dto": "normalized"
+  },
+  "preview": {
+    "enabled": true,
+    "draft_mode": true,
+    "tokenized": true
+  },
+  "revalidation": {
+    "enabled": true,
+    "event_name": "content.published",
+    "signature_header": "x-foundation-signature"
+  },
+  "feature_flags": {
+    "billing": false,
+    "analytics": false,
+    "search": false
+  },
+  "env": {
+    "public": ["NEXT_PUBLIC_SITE_URL"],
+    "server": [
+      "AUTH_SECRET",
+      "SESSION_COOKIE_NAME",
+      "PREVIEW_TOKEN",
+      "DATABASE_URL",
+      "CONTENT_SOURCE",
+      "SANITY_PROJECT_ID",
+      "SANITY_DATASET",
+      "SANITY_API_VERSION",
+      "SANITY_API_TOKEN",
+      "SANITY_WEBHOOK_SECRET",
+      "RESEND_API_KEY",
+      "EMAIL_FROM",
+      "LEADS_INBOX_EMAIL",
+      "LARK_WEBHOOK_URL",
+      "S3_BUCKET",
+      "S3_REGION",
+      "S3_ACCESS_KEY_ID",
+      "S3_SECRET_ACCESS_KEY",
+      "S3_ENDPOINT",
+      "S3_PUBLIC_BASE_URL",
+      "S3_PRESIGN_EXPIRES_SECONDS",
+      "RATE_LIMIT_WINDOW_SECONDS",
+      "RATE_LIMIT_MAX_REQUESTS"
+    ]
+  },
+  "fallback_mode": {
+    "mock_adapters": true,
+    "fixtures_required": true
+  }
+}

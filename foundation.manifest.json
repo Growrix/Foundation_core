@@ -1,0 +1,16 @@
+{
+  "name": "Foundation Core",
+  "runtime_root": "Foundation-Core",
+  "contract_version": 1,
+  "template_attach_mode": "frontend-attach-contract",
+  "required_checks": ["lint", "typecheck", "test", "build"],
+  "primary_endpoints": [
+    "/api/health",
+    "/api/auth/session",
+    "/api/content/pages/home",
+    "/api/content/revalidate",
+    "/api/forms/contact/submit",
+    "/api/media/upload",
+    "/api/preview/enable"
+  ]
+}

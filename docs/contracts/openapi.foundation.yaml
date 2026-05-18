@@ -1,0 +1,82 @@
+openapi: 3.1.0
+info:
+  title: Foundation Core API
+  version: 1.0.0
+  description: Reusable backend-first runtime API for screenshot-driven frontend templates.
+servers:
+  - url: https://foundation-core.example.com
+paths:
+  /api/health:
+    get:
+      summary: Health and adapter readiness
+      responses:
+        '200':
+          description: Runtime health envelope
+  /api/auth/session:
+    get:
+      summary: Session envelope
+      responses:
+        '200':
+          description: Session DTO
+  /api/content/pages/{slug}:
+    get:
+      summary: Page DTO lookup
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Page DTO
+        '404':
+          description: Page not found
+        '500':
+          description: Content provider error
+  /api/content/revalidate:
+    post:
+      summary: Validate and process a content revalidation webhook
+      responses:
+        '202':
+          description: Revalidation accepted
+        '400':
+          description: Invalid payload
+        '401':
+          description: Invalid webhook signature
+        '503':
+          description: Revalidation secret missing
+  /api/forms/{formId}/submit:
+    post:
+      summary: Submit a validated lead form
+      parameters:
+        - in: path
+          name: formId
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Lead accepted
+        '400':
+          description: Invalid payload
+        '429':
+          description: Rate limit exceeded
+        '422':
+          description: Spam or rejected form
+  /api/media/upload:
+    post:
+      summary: Create a media upload intent
+      responses:
+        '200':
+          description: Upload enabled
+        '503':
+          description: Storage adapter unavailable
+  /api/preview/enable:
+    post:
+      summary: Enable draft mode
+      responses:
+        '200':
+          description: Draft mode enabled
+        '401':
+          description: Invalid or missing preview token
