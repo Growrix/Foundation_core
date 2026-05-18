@@ -1,5 +1,5 @@
 {
-  "contract_version": 1,
+  "contract_version": 2,
   "runtime_root": "Foundation-Core",
   "template_modes": ["foundation_attached", "standalone_template"],
   "auth": {
@@ -26,6 +26,32 @@
     "upload_endpoint": "/api/media/upload",
     "asset_dto": "normalized"
   },
+  "billing": {
+    "enabled": true,
+    "checkout_endpoint": "/api/billing/checkout",
+    "portal_endpoint": "/api/billing/portal",
+    "webhook_endpoint": "/api/webhooks/stripe",
+    "interaction_model": "hosted_checkout_and_customer_portal",
+    "offer_ref": {
+      "field": "offer_key",
+      "resolution": "stripe_price.lookup_key"
+    },
+    "response_contract": {
+      "checkout": {
+        "success_field": "checkout_url"
+      },
+      "portal": {
+        "success_field": "portal_url"
+      }
+    },
+    "failure_codes": [
+      "BILLING_NOT_CONFIGURED",
+      "BILLING_OFFER_NOT_FOUND",
+      "BILLING_AUTH_REQUIRED",
+      "BILLING_PORTAL_UNAVAILABLE"
+    ],
+    "state_source": "server_mirror_via_webhooks_only"
+  },
   "preview": {
     "enabled": true,
     "draft_mode": true,
@@ -42,12 +68,12 @@
     "signature_header": "x-foundation-signature"
   },
   "feature_flags": {
-    "billing": false,
+    "billing": true,
     "analytics": false,
     "search": false
   },
   "env": {
-    "public": ["NEXT_PUBLIC_SITE_URL"],
+    "public": ["NEXT_PUBLIC_SITE_URL", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"],
     "server": [
       "AUTH_SECRET",
       "SESSION_COOKIE_NAME",
@@ -71,11 +97,17 @@
       "S3_PUBLIC_BASE_URL",
       "S3_PRESIGN_EXPIRES_SECONDS",
       "RATE_LIMIT_WINDOW_SECONDS",
-      "RATE_LIMIT_MAX_REQUESTS"
+      "RATE_LIMIT_MAX_REQUESTS",
+      "STRIPE_SECRET_KEY",
+      "STRIPE_WEBHOOK_SECRET"
     ]
   },
   "fallback_mode": {
     "mock_adapters": true,
-    "fixtures_required": true
+    "fixtures_required": true,
+    "billing": {
+      "enabled": false,
+      "behavior": "Return BILLING_NOT_CONFIGURED until Stripe secrets are present."
+    }
   }
 }

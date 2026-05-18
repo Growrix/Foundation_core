@@ -39,6 +39,8 @@ vi.mock("next/headers", () => ({
 
 import { GET as getSession } from "@/app/api/auth/session/route";
 import { GET as getAdminDiagnostics } from "@/app/api/admin/diagnostics/route";
+import { POST as createBillingCheckout } from "@/app/api/billing/checkout/route";
+import { POST as createBillingPortal } from "@/app/api/billing/portal/route";
 import { GET as getCollection } from "@/app/api/content/collections/[collection]/route";
 import { GET as getPage } from "@/app/api/content/pages/[slug]/route";
 import { GET as getSiteConfig } from "@/app/api/content/site-config/route";
@@ -47,6 +49,7 @@ import { POST as submitFormRoute } from "@/app/api/forms/[formId]/submit/route";
 import { GET as getHealth } from "@/app/api/health/route";
 import { POST as createUploadRoute } from "@/app/api/media/upload/route";
 import { POST as enablePreviewRoute } from "@/app/api/preview/enable/route";
+import { POST as receiveStripeWebhook } from "@/app/api/webhooks/stripe/route";
 import { resetRuntimeEnvForTests } from "@/server/config/env";
 import { createSessionToken } from "@/server/modules/auth/session-token";
 import { resetRateLimitStateForTests } from "@/server/modules/forms/form.service";
@@ -77,7 +80,9 @@ const managedKeys = [
   "RATE_LIMIT_WINDOW_SECONDS",
   "RATE_LIMIT_MAX_REQUESTS",
   "ANALYTICS_WRITE_KEY",
-  "BILLING_PROVIDER_SECRET",
+  "STRIPE_SECRET_KEY",
+  "STRIPE_WEBHOOK_SECRET",
+  "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
 ] as const;
 
 type EnvelopeResponse<T> = {
@@ -440,5 +445,108 @@ describe("Foundation Core API route integration", () => {
     expect(allowedBody.data?.enabled).toBe(true);
     expect(allowedBody.data?.redirectTo).toBe("/preview");
     expect(enableDraftMode).toHaveBeenCalledTimes(1);
+  });
+
+  it("enforces billing auth and configuration fallback responses", async () => {
+    const deniedCheckout = await createBillingCheckout(
+      new Request("http://localhost/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          offer_key: "starter",
+          success_url: "https://example.com/success",
+          cancel_url: "https://example.com/cancel",
+        }),
+      }),
+    );
+    const deniedCheckoutBody = await parseJson<never>(deniedCheckout);
+
+    expect(deniedCheckout.status).toBe(401);
+    expect(deniedCheckoutBody.ok).toBe(false);
+    expect(deniedCheckoutBody.error?.code).toBe("BILLING_AUTH_REQUIRED");
+
+    const deniedPortal = await createBillingPortal(
+      new Request("http://localhost/api/billing/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          return_url: "https://example.com/account",
+        }),
+      }),
+    );
+    const deniedPortalBody = await parseJson<never>(deniedPortal);
+
+    expect(deniedPortal.status).toBe(401);
+    expect(deniedPortalBody.ok).toBe(false);
+    expect(deniedPortalBody.error?.code).toBe("BILLING_AUTH_REQUIRED");
+
+    process.env.AUTH_SECRET = "1234567890abcdef";
+    resetRuntimeEnvForTests();
+
+    const token = createSessionToken(
+      {
+        sub: "billing-user",
+        email: "billing-user@example.com",
+        roles: ["admin"],
+        exp: Math.floor(Date.now() / 1000) + 300,
+      },
+      process.env.AUTH_SECRET,
+    );
+
+    const configuredCheckout = await createBillingCheckout(
+      new Request("http://localhost/api/billing/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          cookie: `foundation_session=${encodeURIComponent(token)}`,
+        },
+        body: JSON.stringify({
+          offer_key: "starter",
+          success_url: "https://example.com/success",
+          cancel_url: "https://example.com/cancel",
+        }),
+      }),
+    );
+    const configuredCheckoutBody = await parseJson<never>(configuredCheckout);
+
+    expect(configuredCheckout.status).toBe(503);
+    expect(configuredCheckoutBody.ok).toBe(false);
+    expect(configuredCheckoutBody.error?.code).toBe("BILLING_NOT_CONFIGURED");
+
+    const configuredPortal = await createBillingPortal(
+      new Request("http://localhost/api/billing/portal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          cookie: `foundation_session=${encodeURIComponent(token)}`,
+        },
+        body: JSON.stringify({
+          return_url: "https://example.com/account",
+        }),
+      }),
+    );
+    const configuredPortalBody = await parseJson<never>(configuredPortal);
+
+    expect(configuredPortal.status).toBe(503);
+    expect(configuredPortalBody.ok).toBe(false);
+    expect(configuredPortalBody.error?.code).toBe("BILLING_NOT_CONFIGURED");
+  });
+
+  it("returns webhook configuration failure until Stripe secrets exist", async () => {
+    const response = await receiveStripeWebhook(
+      new Request("http://localhost/api/webhooks/stripe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Stripe-Signature": "t=1,v1=bad",
+        },
+        body: JSON.stringify({ type: "invoice.paid" }),
+      }),
+    );
+    const body = await parseJson<never>(response);
+
+    expect(response.status).toBe(503);
+    expect(body.ok).toBe(false);
+    expect(body.error?.code).toBe("BILLING_NOT_CONFIGURED");
   });
 });

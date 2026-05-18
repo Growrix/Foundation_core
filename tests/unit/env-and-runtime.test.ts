@@ -56,7 +56,9 @@ const managedKeys = [
   "RATE_LIMIT_WINDOW_SECONDS",
   "RATE_LIMIT_MAX_REQUESTS",
   "ANALYTICS_WRITE_KEY",
-  "BILLING_PROVIDER_SECRET",
+  "STRIPE_SECRET_KEY",
+  "STRIPE_WEBHOOK_SECRET",
+  "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
 ] as const;
 
 describe("runtime env and adapter surfaces", () => {
@@ -96,7 +98,9 @@ describe("runtime env and adapter surfaces", () => {
     process.env.S3_ACCESS_KEY_ID = "access-key";
     process.env.S3_SECRET_ACCESS_KEY = "secret-key-123";
     process.env.ANALYTICS_WRITE_KEY = "analytics-key";
-    process.env.BILLING_PROVIDER_SECRET = "billing-key";
+    process.env.STRIPE_SECRET_KEY = "sk_test_1234567890";
+    process.env.STRIPE_WEBHOOK_SECRET = "whsec_1234567890";
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = "pk_test_1234567890";
     resetRuntimeEnvForTests();
 
     const adapters = getAdapterStatus();

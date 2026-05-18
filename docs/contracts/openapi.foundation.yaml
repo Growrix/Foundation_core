@@ -34,6 +34,34 @@ paths:
       responses:
         '200':
           description: Session DTO
+  /api/billing/checkout:
+    post:
+      summary: Create Stripe hosted checkout session using offer_key mapping
+      responses:
+        '200':
+          description: Checkout URL envelope
+        '400':
+          description: Validation error
+        '401':
+          description: Billing auth required
+        '404':
+          description: Offer key not found
+        '503':
+          description: Billing not configured
+  /api/billing/portal:
+    post:
+      summary: Create Stripe customer portal session for authenticated users
+      responses:
+        '200':
+          description: Portal URL envelope
+        '400':
+          description: Validation error
+        '401':
+          description: Billing auth required
+        '409':
+          description: Customer mapping unavailable
+        '503':
+          description: Billing not configured
   /api/content/pages/{slug}:
     get:
       summary: Page DTO lookup
@@ -99,3 +127,13 @@ paths:
           description: Draft mode enabled
         '401':
           description: Invalid or missing preview token
+  /api/webhooks/stripe:
+    post:
+      summary: Verify and process Stripe billing lifecycle webhooks
+      responses:
+        '200':
+          description: Webhook accepted or replayed idempotently
+        '400':
+          description: Invalid Stripe signature
+        '503':
+          description: Stripe billing is not configured

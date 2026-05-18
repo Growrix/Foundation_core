@@ -18,6 +18,9 @@
 - Diagnostics route exists at `/api/diagnostics`
 - Admin diagnostics route exists at `/api/admin/diagnostics`
 - Session route exists at `/api/auth/session`
+- Billing checkout route exists at `/api/billing/checkout`
+- Billing portal route exists at `/api/billing/portal`
+- Stripe webhook route exists at `/api/webhooks/stripe`
 - Content page route exists at `/api/content/pages/[slug]`
 - Content revalidation route exists at `/api/content/revalidate`
 - Lead intake route exists at `/api/forms/[formId]/submit`
@@ -37,4 +40,5 @@
 - `npm run verify` now includes route integration coverage and a managed live runtime smoke pass.
 - Build warning about inferred workspace root is resolved by explicit `turbopack.root` configuration in `next.config.ts`.
 - Attached template smoke accepted home-surface fallback proof for templates that do not expose `/api/template-attach-status`.
+- Coverage gate currently passes at: statements `86.44%`, branches `72.07%`, functions `92.71%`, lines `86.38%`.
 - Release classification for current lane state: `factory_ready`.

@@ -27,7 +27,9 @@ export const runtimeEnvKeys = [
   "RATE_LIMIT_WINDOW_SECONDS",
   "RATE_LIMIT_MAX_REQUESTS",
   "ANALYTICS_WRITE_KEY",
-  "BILLING_PROVIDER_SECRET",
+  "STRIPE_SECRET_KEY",
+  "STRIPE_WEBHOOK_SECRET",
+  "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
 ] as const;
 
 export type RuntimeEnvKey = (typeof runtimeEnvKeys)[number];
@@ -65,7 +67,9 @@ const runtimeSchema = z.object({
   RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().min(1).default(60),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().min(1).default(10),
   ANALYTICS_WRITE_KEY: z.string().min(6).optional(),
-  BILLING_PROVIDER_SECRET: z.string().min(6).optional(),
+  STRIPE_SECRET_KEY: z.string().min(10).optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().min(10).optional(),
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().min(10).optional(),
 });
 
 export type RuntimeEnv = z.infer<typeof runtimeSchema>;
@@ -159,7 +163,7 @@ export function getAdapterStatus(): AdapterStatus {
     ),
     lark: Boolean(env.LARK_WEBHOOK_URL),
     analytics: Boolean(env.ANALYTICS_WRITE_KEY),
-    billing: Boolean(env.BILLING_PROVIDER_SECRET),
+    billing: Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET),
     errorTracking: false,
   };
 }

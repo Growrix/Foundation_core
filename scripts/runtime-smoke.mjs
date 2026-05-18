@@ -133,6 +133,36 @@ async function runSmoke(baseUrl) {
       },
     },
     {
+      name: "billing checkout auth guard",
+      method: "POST",
+      path: "/api/billing/checkout",
+      body: {
+        offer_key: "starter",
+        success_url: "https://example.com/success",
+        cancel_url: "https://example.com/cancel",
+      },
+      assert: async (response) => {
+        const body = await readJson(response);
+        if (response.status !== 401 || body?.ok !== false || body?.error?.code !== "BILLING_AUTH_REQUIRED") {
+          throw new Error(`Expected billing checkout endpoint to enforce auth, received ${response.status}.`);
+        }
+      },
+    },
+    {
+      name: "billing portal auth guard",
+      method: "POST",
+      path: "/api/billing/portal",
+      body: {
+        return_url: "https://example.com/account",
+      },
+      assert: async (response) => {
+        const body = await readJson(response);
+        if (response.status !== 401 || body?.ok !== false || body?.error?.code !== "BILLING_AUTH_REQUIRED") {
+          throw new Error(`Expected billing portal endpoint to enforce auth, received ${response.status}.`);
+        }
+      },
+    },
+    {
       name: "content page API",
       method: "GET",
       path: "/api/content/pages/home",
@@ -211,6 +241,20 @@ async function runSmoke(baseUrl) {
         const body = await readJson(response);
         if (response.status !== 401 || body?.ok !== false || !body?.error?.code) {
           throw new Error(`Expected preview endpoint to reject without configuration, received ${response.status}.`);
+        }
+      },
+    },
+    {
+      name: "stripe webhook API fallback",
+      method: "POST",
+      path: "/api/webhooks/stripe",
+      body: {
+        type: "invoice.paid",
+      },
+      assert: async (response) => {
+        const body = await readJson(response);
+        if (response.status !== 503 || body?.ok !== false || body?.error?.code !== "BILLING_NOT_CONFIGURED") {
+          throw new Error(`Expected Stripe webhook endpoint to require configuration, received ${response.status}.`);
         }
       },
     },
