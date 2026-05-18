@@ -17,6 +17,7 @@
 - `npm run smoke:attached`
 - `npm run verify`
 - `npm run verify:factory`
+- `ATTACHED_TEMPLATE_ROOT=<template-root> npm run smoke:attached` (recommended when the default template root is not prepared)
 
 ## Primary local checks
 - Open `/` for the runtime dashboard.
@@ -32,8 +33,9 @@
 - `npm run smoke:runtime` boots a managed production server from `Foundation-Core/` and probes `/`, `/api/health`, `/api/auth/session`, `/api/content/pages/home`, `/api/content/site-config`, `/api/forms/contact/submit`, `/api/media/upload`, and `/api/preview/enable`.
 - Runtime smoke also probes `/api/diagnostics` and `/api/content/revalidate` in fallback mode to verify webhook configuration gating.
 - `npm run verify` now includes the live runtime smoke step after build.
-- `npm run smoke:attached` boots `Foundation-Core/` and an attached template root together, injects `FOUNDATION_BASE_URL`, and requires an attach-status contract surface from the template runtime.
-- `npm run verify:factory` is the paired Foundation + template E2E gate for the current factory lane and depends on a template root that exposes the attach-status contract.
+- `npm run smoke:attached` boots `Foundation-Core/` and an attached template root together, injects `FOUNDATION_BASE_URL`, and validates template attach proof through either `/api/template-attach-status` or the template home surface mode markers.
+- `npm run verify:factory` is the paired Foundation + template E2E gate for the current factory lane.
+- On Windows, use `ATTACHED_TEMPLATE_ROOT` with a shell-safe template path when the default path cannot be executed directly.
 
 ## Delivery note
 - This runtime is API-ready out of the box. Add real adapter secrets in `.env.local` to switch from safe fallbacks to configured integrations.

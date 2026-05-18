@@ -35,7 +35,9 @@
 - Check `/api/content/pages/home`.
 - Check `/api/content/revalidate`.
 - Run `npm run smoke:runtime` after `npm run build` for the managed end-to-end probe set.
-- Run `npm run smoke:attached` after a template root is prepared, built, and exposes the attach-status contract surface expected by the smoke harness.
+- Run `npm run smoke:attached` after a template root is prepared and built.
+- If needed, set `ATTACHED_TEMPLATE_ROOT` to a shell-safe absolute template path before running `npm run smoke:attached`.
+- Attached proof is accepted through either `/api/template-attach-status` or template home-surface mode markers.
 
 ## 8. Export portability
 - After copying the project to a new root, repeat this checklist unchanged.
