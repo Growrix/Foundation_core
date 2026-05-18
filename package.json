@@ -1,0 +1,43 @@
+{
+  "name": "foundation-core",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run tests/unit --coverage",
+    "test:integration": "vitest run tests/integration",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "smoke:runtime": "node ./scripts/runtime-smoke.mjs",
+    "smoke:attached": "node ./scripts/attached-template-smoke.mjs",
+    "verify:factory": "npm run verify && npm run smoke:attached",
+    "verify": "npm run lint && npm run typecheck && npm run test && npm run build && npm run smoke:runtime"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1048.0",
+    "@aws-sdk/s3-request-presigner": "^3.1048.0",
+    "@sanity/client": "^7.22.0",
+    "next": "16.2.6",
+    "postgres": "^3.4.9",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "resend": "^6.12.3",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.0.8",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^4.0.8"
+  }
+}

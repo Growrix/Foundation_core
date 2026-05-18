@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+:root {
+  --background: #07111f;
+  --foreground: #f4f7fb;
+  --surface: linear-gradient(180deg, rgba(20, 36, 58, 0.94), rgba(10, 21, 38, 0.96));
+  --surface-soft: rgba(255, 255, 255, 0.04);
+  --panel: rgba(7, 17, 31, 0.82);
+  --muted: #a8b5c8;
+  --accent: #7de2d1;
+  --border-strong: rgba(125, 226, 209, 0.28);
+  --shadow-panel: 0 24px 80px rgba(0, 0, 0, 0.34);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background:
+    radial-gradient(circle at top left, rgba(125, 226, 209, 0.18), transparent 22%),
+    radial-gradient(circle at top right, rgba(90, 135, 255, 0.15), transparent 28%),
+    linear-gradient(180deg, #091224 0%, #040b14 100%);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+code {
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.foundation-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.75rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--foreground);
+  font-weight: 600;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.foundation-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.foundation-button--primary {
+  border-color: rgba(125, 226, 209, 0.42);
+  background: linear-gradient(135deg, rgba(125, 226, 209, 0.24), rgba(90, 135, 255, 0.18));
+}
+
+.foundation-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(125, 226, 209, 0.1), transparent 24%),
+    radial-gradient(circle at right center, rgba(90, 135, 255, 0.14), transparent 26%);
+}
+
+.foundation-panel {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.5rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.foundation-kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
