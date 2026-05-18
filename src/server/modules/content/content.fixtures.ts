@@ -1,72 +1,38 @@
-import type { CollectionRecord, PageDto } from "@/server/modules/content/content.types";
+import seedSource from "@/server/modules/content/content.seed.json";
+import {
+  parseCollectionRecord,
+  parsePageDto,
+  parseSiteConfig,
+} from "@/server/modules/content/cms.contract";
+import type {
+  CollectionRecord,
+  PageDto,
+  SiteConfigDto,
+} from "@/server/modules/content/content.types";
 
-export const pageFixtures: Record<string, PageDto> = {
-  home: {
-    slug: "home",
-    title: "Foundation Core",
-    description: "Reusable runtime foundation for screenshot-driven frontend delivery.",
-    updatedAt: "2026-05-16T00:00:00.000Z",
-    sections: [
-      {
-        id: "hero-runtime",
-        kind: "hero",
-        title: "Attach templates without rebuilding backend infrastructure.",
-        body: "Foundation Core centralizes auth, content DTOs, lead intake, preview, media, and operational health.",
-      },
-      {
-        id: "value-contracts",
-        kind: "value",
-        title: "Contracts stay stable while frontend visuals evolve.",
-        body: "Screenshot-driven templates consume typed attach contracts instead of internal app modules.",
-      },
-      {
-        id: "proof-health",
-        kind: "proof",
-        title: "Health visibility is built into the root runtime.",
-        body: "Readiness signals expose which adapters are configured and which are still in safe fallback mode.",
-      },
-      {
-        id: "conversion-intake",
-        kind: "conversion",
-        title: "Lead intake is ready for contact, quote, and booking flows.",
-        body: "Form submissions use normalized envelopes and anti-spam controls so client templates do not duplicate backend logic.",
-      },
-    ],
-  },
+type FixtureSeedSource = {
+  schemaVersion: string;
+  pages: PageDto[];
+  collections: Record<string, CollectionRecord[]>;
+  siteConfig: SiteConfigDto;
 };
 
-export const collectionFixtures: Record<string, CollectionRecord[]> = {
-  services: [
-    {
-      id: "foundation-runtime",
-      title: "Foundation Runtime",
-      summary: "Reusable runtime shell with typed API contracts and health monitoring.",
-    },
-    {
-      id: "template-attach",
-      title: "Template Attach Contract",
-      summary: "A normalized boundary for screenshot-driven frontend implementations.",
-    },
-  ],
-  faq: [
-    {
-      id: "faq-runtime",
-      title: "Does Foundation Core require the DS?",
-      summary: "No. It is intentionally independent from Frontend-Master_DS and DS-Planning-Engine.",
-    },
-  ],
-  testimonials: [
-    {
-      id: "ops-proof",
-      title: "Operational confidence",
-      summary: "Health, preview, forms, and media surfaces are reusable across client deliveries.",
-    },
-  ],
-  posts: [
-    {
-      id: "planning-runtime-boundary",
-      title: "Planning runtime boundaries",
-      summary: "Keep backend operational concerns inside the foundation and public visual work inside template outputs.",
-    },
-  ],
-};
+const typedSeedSource = seedSource as FixtureSeedSource;
+
+export const fixtureSeedVersion = typedSeedSource.schemaVersion;
+
+export const pageFixtures: Record<string, PageDto> = Object.fromEntries(
+  typedSeedSource.pages.map((page) => {
+    const parsed = parsePageDto(page) as PageDto;
+    return [parsed.slug, parsed];
+  }),
+);
+
+export const collectionFixtures: Record<string, CollectionRecord[]> = Object.fromEntries(
+  Object.entries(typedSeedSource.collections).map(([collectionName, records]) => [
+    collectionName,
+    records.map((record) => parseCollectionRecord(record) as CollectionRecord),
+  ]),
+);
+
+export const siteConfigFixture = parseSiteConfig(typedSeedSource.siteConfig) as SiteConfigDto;

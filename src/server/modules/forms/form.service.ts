@@ -1,15 +1,18 @@
 import { z } from "zod";
 
-import { getRuntimeEnv } from "@/server/config/env";
-import { sendLeadEmail, type LeadEmailResult } from "@/server/modules/forms/email.service";
+import type { LeadEmailResult } from "@/server/modules/forms/email.service";
+import type { LeadPersistenceResult } from "@/server/modules/forms/lead.repository";
+import { getFormsProviderAdapters } from "@/server/modules/forms/provider-adapters";
 import {
-  persistLeadSubmission,
-  type LeadPersistenceResult,
-} from "@/server/modules/forms/lead.repository";
-import {
-  notifyLark,
-  type LarkNotificationResult,
-} from "@/server/modules/ops/lark-notifier.service";
+  consumeSubmissionRateLimit,
+  resetRateLimitForTests,
+} from "@/server/modules/forms/rate-limit.service";
+import type {
+  SubmissionLifecycleEntry,
+  SubmissionLifecycleStatus,
+} from "@/server/modules/forms/submission-log.repository";
+import { resetSubmissionLogForTests } from "@/server/modules/forms/submission-log.repository";
+import type { LarkNotificationResult } from "@/server/modules/ops/lark-notifier.service";
 
 const submissionSchema = z.object({
   name: z.string().min(2),
@@ -50,60 +53,19 @@ export type AcceptedSubmission = {
     leadAccepted: LarkNotificationResult;
     emailFailed: LarkNotificationResult | null;
   };
+  rateLimitMode: "memory" | "database";
+  lifecycle: SubmissionLifecycleEntry[];
 };
 
 export type ProcessSubmissionResult = RejectedSubmission | AcceptedSubmission;
-
-type RateLimitState = {
-  count: number;
-  windowStartedAt: number;
-};
-
-const rateLimitState = new Map<string, RateLimitState>();
 
 export function parseSubmissionPayload(payload: unknown): SubmissionPayload {
   return submissionSchema.parse(payload);
 }
 
 export function resetRateLimitStateForTests() {
-  rateLimitState.clear();
-}
-
-function checkRateLimit(rateLimitKey: string) {
-  const env = getRuntimeEnv();
-  const now = Date.now();
-  const windowMs = env.RATE_LIMIT_WINDOW_SECONDS * 1000;
-  const maxRequests = env.RATE_LIMIT_MAX_REQUESTS;
-
-  const existing = rateLimitState.get(rateLimitKey);
-
-  if (!existing || now - existing.windowStartedAt >= windowMs) {
-    rateLimitState.set(rateLimitKey, {
-      count: 1,
-      windowStartedAt: now,
-    });
-
-    return {
-      allowed: true,
-      retryAfterSeconds: 0,
-    } as const;
-  }
-
-  if (existing.count >= maxRequests) {
-    const retryAfterSeconds = Math.max(1, Math.ceil((windowMs - (now - existing.windowStartedAt)) / 1000));
-    return {
-      allowed: false,
-      retryAfterSeconds,
-    } as const;
-  }
-
-  existing.count += 1;
-  rateLimitState.set(rateLimitKey, existing);
-
-  return {
-    allowed: true,
-    retryAfterSeconds: 0,
-  } as const;
+  resetRateLimitForTests();
+  resetSubmissionLogForTests();
 }
 
 export function submitForm(formId: string, payload: SubmissionPayload): RejectedSubmission | {
@@ -149,6 +111,27 @@ export async function processLeadSubmission(
   payload: SubmissionPayload,
   context: SubmissionContext,
 ): Promise<ProcessSubmissionResult> {
+  const adapters = getFormsProviderAdapters();
+  const lifecycle: SubmissionLifecycleEntry[] = [];
+
+  const appendLifecycle = async (
+    status: SubmissionLifecycleStatus,
+    provider: string,
+    details: Record<string, unknown>,
+  ) => {
+    const entry: SubmissionLifecycleEntry = {
+      requestId: context.requestId,
+      formId,
+      status,
+      provider,
+      details,
+      createdAt: new Date().toISOString(),
+    };
+
+    lifecycle.push(entry);
+    await adapters.submissionLogAdapter.append(entry);
+  };
+
   const baseResult = submitForm(formId, payload);
 
   if (!baseResult.accepted) {
@@ -156,7 +139,7 @@ export async function processLeadSubmission(
   }
 
   const rateLimitKey = `${formId}:${context.ipAddress ?? "unknown"}`;
-  const rateLimit = checkRateLimit(rateLimitKey);
+  const rateLimit = await consumeSubmissionRateLimit(rateLimitKey);
 
   if (!rateLimit.allowed) {
     return {
@@ -167,7 +150,12 @@ export async function processLeadSubmission(
     };
   }
 
-  const persistence = await persistLeadSubmission({
+  await appendLifecycle("accepted", "foundation.forms", {
+    requestId: context.requestId,
+    rateLimitMode: rateLimit.mode,
+  });
+
+  const persistence = await adapters.persistenceAdapter.persist({
     formId,
     payload,
     requestId: context.requestId,
@@ -175,13 +163,32 @@ export async function processLeadSubmission(
     userAgent: context.userAgent,
   });
 
-  const email = await sendLeadEmail({
+  if (persistence.persisted) {
+    await appendLifecycle("persisted", adapters.persistenceAdapter.name, {
+      leadId: persistence.leadId,
+      mode: persistence.mode,
+    });
+  }
+
+  const email = await adapters.deliveryAdapter.deliver({
     formId,
     payload,
     requestId: context.requestId,
   });
 
-  const leadAccepted = await notifyLark("lead.accepted", {
+  if (email.delivered) {
+    await appendLifecycle("delivered", adapters.deliveryAdapter.name, {
+      messageId: email.messageId,
+      provider: email.provider,
+    });
+  } else {
+    await appendLifecycle("delivery_failed", adapters.deliveryAdapter.name, {
+      reason: email.reason,
+      provider: email.provider,
+    });
+  }
+
+  const leadAccepted = await adapters.notificationAdapter.notify("lead.accepted", {
     requestId: context.requestId,
     formId,
     emailDelivered: email.delivered,
@@ -192,17 +199,28 @@ export async function processLeadSubmission(
 
   const emailFailed = email.delivered
     ? null
-    : await notifyLark("lead.email_failed", {
+    : await adapters.notificationAdapter.notify("lead.email_failed", {
         requestId: context.requestId,
         formId,
         leadEmail: payload.email,
         reason: email.reason,
       });
 
+  if (!leadAccepted.sent || (emailFailed && !emailFailed.sent)) {
+    await appendLifecycle("notify_failed", adapters.notificationAdapter.name, {
+      leadAcceptedSent: leadAccepted.sent,
+      emailFailedSent: emailFailed?.sent ?? null,
+      leadAcceptedReason: leadAccepted.reason,
+      emailFailedReason: emailFailed?.reason ?? null,
+    });
+  }
+
   return {
     ...baseResult,
     persistence,
     email,
+    rateLimitMode: rateLimit.mode,
+    lifecycle,
     notifications: {
       leadAccepted,
       emailFailed,

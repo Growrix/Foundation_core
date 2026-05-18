@@ -1,6 +1,4 @@
-import postgres from "postgres";
-
-import { getRuntimeEnv } from "@/server/config/env";
+import { getFormsSqlClient, resetFormsDbForTests } from "@/server/modules/forms/forms.db";
 import type { SubmissionPayload } from "@/server/modules/forms/form.service";
 
 export type LeadPersistenceResult = {
@@ -17,29 +15,15 @@ export type PersistLeadInput = {
   userAgent: string | null;
 };
 
-let sqlClient: postgres.Sql | null = null;
 let schemaEnsured = false;
 
-function getSqlClient() {
-  const env = getRuntimeEnv();
+async function ensureSchema() {
+  const sql = getFormsSqlClient();
 
-  if (!env.DATABASE_URL) {
-    return null;
+  if (!sql) {
+    return;
   }
 
-  if (!sqlClient) {
-    sqlClient = postgres(env.DATABASE_URL, {
-      prepare: false,
-      max: 1,
-      connect_timeout: 5,
-      idle_timeout: 5,
-    });
-  }
-
-  return sqlClient;
-}
-
-async function ensureSchema(sql: postgres.Sql) {
   if (schemaEnsured) {
     return;
   }
@@ -61,7 +45,7 @@ async function ensureSchema(sql: postgres.Sql) {
 }
 
 export async function persistLeadSubmission(input: PersistLeadInput): Promise<LeadPersistenceResult> {
-  const sql = getSqlClient();
+  const sql = getFormsSqlClient();
 
   if (!sql) {
     return {
@@ -71,7 +55,7 @@ export async function persistLeadSubmission(input: PersistLeadInput): Promise<Le
     };
   }
 
-  await ensureSchema(sql);
+  await ensureSchema();
 
   const rows = await sql<{ id: number }[]>`
     INSERT INTO foundation_leads (
@@ -105,10 +89,6 @@ export async function persistLeadSubmission(input: PersistLeadInput): Promise<Le
 }
 
 export async function resetLeadRepositoryForTests() {
-  if (sqlClient) {
-    await sqlClient.end({ timeout: 1 });
-  }
-
-  sqlClient = null;
+  await resetFormsDbForTests();
   schemaEnsured = false;
 }

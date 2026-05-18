@@ -12,6 +12,22 @@ paths:
       responses:
         '200':
           description: Runtime health envelope
+  /api/diagnostics:
+    get:
+      summary: Runtime diagnostics and categorized readiness
+      responses:
+        '200':
+          description: Diagnostics envelope
+  /api/admin/diagnostics:
+    get:
+      summary: Authenticated diagnostics surface for admin roles
+      responses:
+        '200':
+          description: Admin diagnostics envelope
+        '401':
+          description: Authentication required
+        '403':
+          description: Role forbidden
   /api/auth/session:
     get:
       summary: Session envelope
@@ -41,15 +57,18 @@ paths:
         '202':
           description: Revalidation accepted
         '400':
-          description: Invalid payload
-        '401':
-          description: Invalid webhook signature
+          description: Invalid payload or webhook signature
         '503':
           description: Revalidation secret missing
   /api/forms/{formId}/submit:
     post:
       summary: Submit a validated lead form
       parameters:
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema:
+            type: string
         - in: path
           name: formId
           required: true
@@ -69,7 +88,7 @@ paths:
       summary: Create a media upload intent
       responses:
         '200':
-          description: Upload enabled
+          description: Upload enabled with asset metadata and optional signed read URL
         '503':
           description: Storage adapter unavailable
   /api/preview/enable:

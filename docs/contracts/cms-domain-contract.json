@@ -1,0 +1,21 @@
+{
+  "version": "2026-05-18",
+  "slug_invariant": "lowercase-kebab-case",
+  "document_types": [
+    {
+      "name": "page",
+      "required_fields": ["slug", "title", "description", "updatedAt", "sections"]
+    },
+    {
+      "name": "collection",
+      "required_fields": ["id", "title", "summary"]
+    },
+    {
+      "name": "siteConfig",
+      "required_fields": ["brand", "navigation", "footer"]
+    }
+  ],
+  "sections": {
+    "allowed_kinds": ["hero", "value", "proof", "conversion", "footer"]
+  }
+}

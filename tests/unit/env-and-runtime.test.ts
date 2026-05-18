@@ -1,4 +1,29 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@aws-sdk/client-s3", () => ({
+  S3Client: class {},
+  PutObjectCommand: class {
+    input: Record<string, unknown>;
+
+    constructor(input: Record<string, unknown>) {
+      this.input = input;
+    }
+  },
+  GetObjectCommand: class {
+    input: Record<string, unknown>;
+
+    constructor(input: Record<string, unknown>) {
+      this.input = input;
+    }
+  },
+}));
+
+vi.mock("@aws-sdk/s3-request-presigner", () => ({
+  getSignedUrl: vi.fn(async (_client: unknown, command: { input?: { Key?: string } }) => {
+    const key = command.input?.Key ?? "asset.bin";
+    return `https://signed.example.com/${key}?X-Amz-Signature=mock`;
+  }),
+}));
 
 import { getAdapterStatus, getRuntimeEnv, resetRuntimeEnvForTests } from "@/server/config/env";
 import { getSessionSnapshot } from "@/server/modules/auth/session.service";

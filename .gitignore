@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+*.log
 
 # debug
 npm-debug.log*
@@ -35,6 +36,9 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# local audits and tooling artifacts
+.audit/
 
 # typescript
 *.tsbuildinfo

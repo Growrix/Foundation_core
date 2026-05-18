@@ -6,6 +6,8 @@
   "required_checks": ["lint", "typecheck", "test", "build"],
   "primary_endpoints": [
     "/api/health",
+    "/api/diagnostics",
+    "/api/admin/diagnostics",
     "/api/auth/session",
     "/api/content/pages/home",
     "/api/content/revalidate",

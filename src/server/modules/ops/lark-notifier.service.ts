@@ -1,6 +1,11 @@
 import { getAdapterStatus, getRuntimeEnv } from "@/server/config/env";
 
-export type LarkEvent = "lead.accepted" | "lead.email_failed" | "content.revalidate_signature_failed";
+export type LarkEvent =
+  | "lead.accepted"
+  | "lead.email_failed"
+  | "content.revalidate_signature_failed"
+  | "content.revalidate_payload_invalid"
+  | "content.revalidate_failed";
 
 export type LarkNotificationResult = {
   sent: boolean;
