@@ -1,5 +1,14 @@
 import { getRuntimeEnv } from "@/server/config/env";
-import { collectionFixtures, pageFixtures } from "@/server/modules/content/content.fixtures";
+import {
+  parseCollectionRecord,
+  parsePageDto,
+  parseSiteConfig,
+} from "@/server/modules/content/cms.contract";
+import {
+  collectionFixtures,
+  pageFixtures,
+  siteConfigFixture,
+} from "@/server/modules/content/content.fixtures";
 import {
   fetchSanityCollection,
   fetchSanityPageBySlug,
@@ -7,46 +16,27 @@ import {
 } from "@/server/modules/content/sanity.client";
 import type { CollectionRecord, PageDto, SiteConfigDto } from "@/server/modules/content/content.types";
 
-function getFixtureSiteConfig(): SiteConfigDto {
-  return {
-    brand: {
-      name: "Foundation Core",
-      supportEmail: "ops@example.com",
-    },
-    navigation: [
-      { label: "Platform", href: "/" },
-      { label: "Admin", href: "/admin" },
-      { label: "Preview", href: "/preview" },
-    ],
-    footer: {
-      attribution: {
-        enabled: true,
-        text: "Built and maintenance by",
-        linkText: "Growrix OS",
-        url: "https://www.growrixos.com",
-      },
-    },
-  };
-}
-
 export async function getPageBySlug(slug: string): Promise<PageDto | null> {
   const env = getRuntimeEnv();
 
   if (env.CONTENT_SOURCE === "sanity") {
-    return fetchSanityPageBySlug(slug);
+    const page = await fetchSanityPageBySlug(slug);
+    return page ? (parsePageDto(page) as PageDto) : null;
   }
 
-  return pageFixtures[slug] ?? null;
+  const page = pageFixtures[slug];
+  return page ? (parsePageDto(page) as PageDto) : null;
 }
 
 export async function getCollection(name: string): Promise<CollectionRecord[]> {
   const env = getRuntimeEnv();
 
   if (env.CONTENT_SOURCE === "sanity") {
-    return fetchSanityCollection(name);
+    const records = await fetchSanityCollection(name);
+    return records.map((record) => parseCollectionRecord(record) as CollectionRecord);
   }
 
-  return collectionFixtures[name] ?? [];
+  return (collectionFixtures[name] ?? []).map((record) => parseCollectionRecord(record) as CollectionRecord);
 }
 
 export async function getSiteConfig(): Promise<SiteConfigDto> {
@@ -59,8 +49,8 @@ export async function getSiteConfig(): Promise<SiteConfigDto> {
       throw new Error("Sanity content source is enabled, but siteConfig document is missing.");
     }
 
-    return config;
+    return parseSiteConfig(config) as SiteConfigDto;
   }
 
-  return getFixtureSiteConfig();
+  return parseSiteConfig(siteConfigFixture) as SiteConfigDto;
 }

@@ -1,6 +1,12 @@
 import { createClient, type SanityClient } from "@sanity/client";
 
 import { getRuntimeEnv } from "@/server/config/env";
+import {
+  normalizeSlug,
+  parseCollectionRecord,
+  parsePageDto,
+  parseSiteConfig,
+} from "@/server/modules/content/cms.contract";
 import type {
   CollectionRecord,
   PageDto,
@@ -49,6 +55,7 @@ function mapSection(section: Record<string, unknown>, index: number): PageSectio
 
 export async function fetchSanityPageBySlug(slug: string): Promise<PageDto | null> {
   const client = getSanityClient();
+  const normalizedSlug = normalizeSlug(slug);
 
   const page = await client.fetch<Record<string, unknown> | null>(
     `*[_type == "page" && slug.current == $slug][0]{
@@ -63,7 +70,7 @@ export async function fetchSanityPageBySlug(slug: string): Promise<PageDto | nul
         body
       }
     }`,
-    { slug },
+    { slug: normalizedSlug },
   );
 
   if (!page) {
@@ -72,13 +79,13 @@ export async function fetchSanityPageBySlug(slug: string): Promise<PageDto | nul
 
   const rawSections = Array.isArray(page.sections) ? page.sections : [];
 
-  return {
-    slug: typeof page.slug === "string" ? page.slug : slug,
+  return parsePageDto({
+    slug: typeof page.slug === "string" ? page.slug : normalizedSlug,
     title: typeof page.title === "string" ? page.title : "Untitled page",
     description: typeof page.description === "string" ? page.description : "",
     updatedAt: typeof page.updatedAt === "string" ? page.updatedAt : new Date().toISOString(),
     sections: rawSections.map((section, index) => mapSection(section as Record<string, unknown>, index)),
-  };
+  }) as PageDto;
 }
 
 export async function fetchSanityCollection(name: string): Promise<CollectionRecord[]> {
@@ -94,18 +101,20 @@ export async function fetchSanityCollection(name: string): Promise<CollectionRec
     { collection: name },
   );
 
-  return records.map((record, index) => ({
-    id:
-      (typeof record._id === "string" && record._id) ||
-      `${name}-${index + 1}`,
-    title: typeof record.title === "string" ? record.title : "Untitled",
-    summary:
-      typeof record.summary === "string"
-        ? record.summary
-        : typeof record.excerpt === "string"
-          ? record.excerpt
-          : "",
-  }));
+  return records.map((record, index) =>
+    parseCollectionRecord({
+      id:
+        (typeof record._id === "string" && record._id) ||
+        `${name}-${index + 1}`,
+      title: typeof record.title === "string" ? record.title : "Untitled",
+      summary:
+        typeof record.summary === "string"
+          ? record.summary
+          : typeof record.excerpt === "string"
+            ? record.excerpt
+            : "",
+    }) as CollectionRecord,
+  );
 }
 
 export async function fetchSanitySiteConfig(): Promise<SiteConfigDto | null> {
@@ -127,7 +136,7 @@ export async function fetchSanitySiteConfig(): Promise<SiteConfigDto | null> {
   const footer = (config.footer as Record<string, unknown> | undefined) ?? {};
   const attribution = (footer.attribution as Record<string, unknown> | undefined) ?? {};
 
-  return {
+  return parseSiteConfig({
     brand: {
       name: typeof brand.name === "string" ? brand.name : "Foundation Core",
       supportEmail: typeof brand.supportEmail === "string" ? brand.supportEmail : "ops@example.com",
@@ -149,5 +158,5 @@ export async function fetchSanitySiteConfig(): Promise<SiteConfigDto | null> {
         url: typeof attribution.url === "string" ? attribution.url : "https://www.growrixos.com",
       },
     },
-  };
+  }) as SiteConfigDto;
 }

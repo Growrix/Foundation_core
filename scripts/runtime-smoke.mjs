@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import fs from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 import process from "node:process";
@@ -80,6 +81,8 @@ async function killProcessTree(child) {
 }
 
 async function runSmoke(baseUrl) {
+  const checkResults = [];
+
   const checks = [
     {
       name: "runtime dashboard",
@@ -100,6 +103,21 @@ async function runSmoke(baseUrl) {
         const body = await readJson(response);
         if (response.status !== 200 || body?.ok !== true) {
           throw new Error(`Expected health 200 success envelope, received ${response.status}.`);
+        }
+      },
+    },
+    {
+      name: "diagnostics API",
+      method: "GET",
+      path: "/api/diagnostics",
+      assert: async (response) => {
+        const body = await readJson(response);
+        if (
+          response.status !== 200 ||
+          body?.ok !== true ||
+          !body?.data?.readiness?.categorized?.required_for_production
+        ) {
+          throw new Error(`Expected diagnostics 200 with categorized readiness, received ${response.status}.`);
         }
       },
     },
@@ -208,7 +226,30 @@ async function runSmoke(baseUrl) {
 
     await check.assert(response);
     log(`SMOKE PASS: ${check.name} -> ${response.status}`);
+
+    checkResults.push({
+      name: check.name,
+      status: response.status,
+      path: check.path,
+    });
   }
+
+  return checkResults;
+}
+
+async function writeSmokeEvidence(baseUrl, checks) {
+  const auditDirectory = path.resolve(process.cwd(), ".audit");
+  await fs.mkdir(auditDirectory, { recursive: true });
+
+  const evidencePath = path.resolve(auditDirectory, "runtime-smoke-evidence.json");
+  const evidence = {
+    generatedAt: new Date().toISOString(),
+    baseUrl,
+    checks,
+  };
+
+  await fs.writeFile(evidencePath, JSON.stringify(evidence, null, 2), "utf8");
+  log(`SMOKE EVIDENCE: ${evidencePath}`);
 }
 
 async function main() {
@@ -235,7 +276,8 @@ async function main() {
       log(`Using external Foundation Core server at ${baseUrl}`);
     }
 
-    await runSmoke(baseUrl);
+    const checkResults = await runSmoke(baseUrl);
+    await writeSmokeEvidence(baseUrl, checkResults);
     log(`Foundation runtime smoke passed against ${baseUrl}`);
   } finally {
     await killProcessTree(child);

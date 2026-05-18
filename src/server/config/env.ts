@@ -1,5 +1,37 @@
 import { z } from "zod";
 
+export const runtimeEnvKeys = [
+  "NODE_ENV",
+  "NEXT_PUBLIC_SITE_URL",
+  "AUTH_SECRET",
+  "SESSION_COOKIE_NAME",
+  "PREVIEW_TOKEN",
+  "DATABASE_URL",
+  "CONTENT_SOURCE",
+  "SANITY_PROJECT_ID",
+  "SANITY_DATASET",
+  "SANITY_API_VERSION",
+  "SANITY_API_TOKEN",
+  "SANITY_WEBHOOK_SECRET",
+  "RESEND_API_KEY",
+  "EMAIL_FROM",
+  "LEADS_INBOX_EMAIL",
+  "LARK_WEBHOOK_URL",
+  "S3_BUCKET",
+  "S3_REGION",
+  "S3_ACCESS_KEY_ID",
+  "S3_SECRET_ACCESS_KEY",
+  "S3_ENDPOINT",
+  "S3_PUBLIC_BASE_URL",
+  "S3_PRESIGN_EXPIRES_SECONDS",
+  "RATE_LIMIT_WINDOW_SECONDS",
+  "RATE_LIMIT_MAX_REQUESTS",
+  "ANALYTICS_WRITE_KEY",
+  "BILLING_PROVIDER_SECRET",
+] as const;
+
+export type RuntimeEnvKey = (typeof runtimeEnvKeys)[number];
+
 const runtimeSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   NEXT_PUBLIC_SITE_URL: z.url().default("https://foundation-core.example.com"),
@@ -47,6 +79,7 @@ export type AdapterStatus = {
   lark: boolean;
   analytics: boolean;
   billing: boolean;
+  errorTracking: boolean;
 };
 
 const requiredProductionAdapters = [
@@ -65,6 +98,26 @@ export type ProductionReadiness = {
   ready: boolean;
   required: RequiredProductionAdapter[];
   missing: RequiredProductionAdapter[];
+};
+
+export type ReadinessCategory = "required_for_boot" | "required_for_production" | "optional";
+
+export type CategorizedReadiness = {
+  required_for_boot: Array<{
+    name: string;
+    ready: boolean;
+    reason: string | null;
+  }>;
+  required_for_production: Array<{
+    name: string;
+    ready: boolean;
+    reason: string | null;
+  }>;
+  optional: Array<{
+    name: string;
+    ready: boolean;
+    reason: string | null;
+  }>;
 };
 
 let cachedEnv: RuntimeEnv | null = null;
@@ -107,6 +160,7 @@ export function getAdapterStatus(): AdapterStatus {
     lark: Boolean(env.LARK_WEBHOOK_URL),
     analytics: Boolean(env.ANALYTICS_WRITE_KEY),
     billing: Boolean(env.BILLING_PROVIDER_SECRET),
+    errorTracking: false,
   };
 }
 
@@ -119,4 +173,36 @@ export function getProductionReadiness(): ProductionReadiness {
     required: [...requiredProductionAdapters],
     missing,
   };
+}
+
+export function getCategorizedReadiness(): CategorizedReadiness {
+  const adapters = getAdapterStatus();
+  const optionalAdapters = ["analytics", "billing", "errorTracking"] as const;
+
+  return {
+    required_for_boot: [
+      {
+        name: "runtime_env",
+        ready: true,
+        reason: null,
+      },
+    ],
+    required_for_production: requiredProductionAdapters.map((adapter) => ({
+      name: adapter,
+      ready: adapters[adapter],
+      reason: adapters[adapter] ? null : `${adapter} adapter is not configured.`,
+    })),
+    optional: optionalAdapters.map((adapter) => ({
+      name: adapter,
+      ready: adapters[adapter],
+      reason: adapters[adapter] ? null : `${adapter} adapter is optional and currently disabled.`,
+    })),
+  };
+}
+
+export function getEnvironmentPresenceMap() {
+  return Object.fromEntries(runtimeEnvKeys.map((key) => [key, Boolean(process.env[key])])) as Record<
+    RuntimeEnvKey,
+    boolean
+  >;
 }

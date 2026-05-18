@@ -35,7 +35,7 @@ describe("content revalidate route", () => {
     expect(body.error.code).toBe("REVALIDATION_NOT_CONFIGURED");
   });
 
-  it("returns 401 when the webhook signature is invalid", async () => {
+  it("returns 400 when the webhook signature is invalid", async () => {
     process.env.SANITY_WEBHOOK_SECRET = "super-secret-webhook-token";
     resetRuntimeEnvForTests();
 
@@ -51,7 +51,7 @@ describe("content revalidate route", () => {
     );
 
     const body = await response.json();
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(400);
     expect(body.ok).toBe(false);
     expect(body.error.code).toBe("REVALIDATION_SIGNATURE_INVALID");
   });
@@ -79,5 +79,31 @@ describe("content revalidate route", () => {
     expect(body.ok).toBe(true);
     expect(body.data.accepted).toBe(true);
     expect(revalidatePathMock).toHaveBeenCalled();
+  });
+
+  it("ignores unsupported events with accepted=false", async () => {
+    process.env.SANITY_WEBHOOK_SECRET = "super-secret-webhook-token";
+    resetRuntimeEnvForTests();
+
+    const payload = JSON.stringify({ event: "content.archived", slug: "home" });
+    const signature = createRevalidationSignature(payload, process.env.SANITY_WEBHOOK_SECRET);
+
+    const response = await revalidateRoute(
+      new Request("http://localhost/api/content/revalidate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-foundation-signature": signature,
+        },
+        body: payload,
+      }),
+    );
+
+    const body = await response.json();
+    expect(response.status).toBe(202);
+    expect(body.ok).toBe(true);
+    expect(body.data.accepted).toBe(false);
+    expect(body.data.ignored).toBe(true);
+    expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 });

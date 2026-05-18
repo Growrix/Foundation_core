@@ -30,11 +30,12 @@
 ## 7. Smoke verification
 - Check `/`.
 - Check `/api/health`.
+- Check `/api/diagnostics`.
 - Check `/api/auth/session`.
 - Check `/api/content/pages/home`.
 - Check `/api/content/revalidate`.
 - Run `npm run smoke:runtime` after `npm run build` for the managed end-to-end probe set.
-- Run `npm run smoke:attached` after the template root has passed its own build to prove attached mode with `FOUNDATION_BASE_URL` wired.
+- Run `npm run smoke:attached` after a template root is prepared, built, and exposes the attach-status contract surface expected by the smoke harness.
 
 ## 8. Export portability
 - After copying the project to a new root, repeat this checklist unchanged.

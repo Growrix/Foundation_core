@@ -5,6 +5,7 @@
   "auth": {
     "enabled": true,
     "session_endpoint": "/api/auth/session",
+    "admin_diagnostics_endpoint": "/api/admin/diagnostics",
     "fallback_routes": ["/sign-in", "/sign-up"]
   },
   "content": {
@@ -29,6 +30,11 @@
     "enabled": true,
     "draft_mode": true,
     "tokenized": true
+  },
+  "diagnostics": {
+    "enabled": true,
+    "endpoint": "/api/diagnostics",
+    "categorized_readiness": true
   },
   "revalidation": {
     "enabled": true,

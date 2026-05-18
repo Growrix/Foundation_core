@@ -12,15 +12,18 @@
 2. Run `npm install`.
 3. Copy `ENV.example` to `.env.local` and fill in secrets.
 4. Run `npm run dev`.
-5. Probe `/`, `/api/health`, `/api/content/pages/home`, and `/api/content/revalidate`.
+5. Probe `/`, `/api/health`, `/api/diagnostics`, `/api/content/pages/home`, and `/api/content/revalidate`.
 6. Run `npm run build && npm run smoke:runtime`.
-7. Run `npm run smoke:attached` after the target template root is built and available.
+7. Run `npm run smoke:attached` after the target template root is built and exposes the attach-status contract endpoint expected by the harness.
 
 ## Validation criteria
 - The dev server boots from the exported location.
 - The runtime dashboard loads.
 - The health API responds.
 - The managed runtime smoke harness passes.
-- The attached template smoke harness passes.
+- The attached template smoke harness passes when an attach-contract-compliant template root is present.
 - No repo-relative imports are required.
 - Production adapter readiness is reflected accurately by `/api/health`.
+
+## Release classification
+- `foundation_ready_template_pending` is valid when `npm run verify` passes but no attach-contract-compliant template root is available for `npm run smoke:attached`.
